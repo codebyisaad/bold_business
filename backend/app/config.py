@@ -18,5 +18,8 @@ class Settings(BaseSettings):
     # DECISIONS.md section 10: larger uploads are refused before they are read.
     max_upload_bytes: int = 10 * 1024 * 1024
 
+    # Browser origins allowed to call the API: the Vite dev server.
+    cors_origins: list[str] = ["http://localhost:5173"]
+
 
 settings = Settings()
