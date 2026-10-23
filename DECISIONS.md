@@ -148,6 +148,27 @@ and nothing is written, if:
 - `role` is the source of truth for admin. The database enforces that a recruiter's regions
   contain `*` if and only if their role is `admin`.
 
+## 14. Reading candidates
+
+- `GET /api/v1/candidates` and `GET /api/v1/recruiters` both require a known recruiter:
+  no `X-Recruiter-Id` header is 401, an unknown one is 403.
+- **Scope:** a recruiter sees only candidates in their assigned regions; an admin sees all.
+  This is enforced twice:
+  - in the query itself;
+  - by Postgres row-level security, where the policy reads the recruiter set for the
+    current transaction. With no recruiter set, the policy matches no rows.
+- **Search** is case-insensitive and matches anywhere in the full name ("first last") or the
+  email, so "Alicia Trent", "trent" and "gmail" all match. `%` and `_` are taken literally.
+- **Status** must be one of the six statuses (section 4). Anything else is a 422.
+- Search and status only narrow the recruiter's scope; they never widen it.
+- **Paging:** `page` starts at 1 and `page_size` defaults to 25 (maximum 100). The response
+  is `{items, total, page, page_size}`.
+- **Order:** by `candidate_id`. That is the first key of the agreed order (ID, first name,
+  last name, email, region, status). Since the ID is unique, the later keys never decide
+  anything.
+- **The recruiter list** returns ID, name, role and regions for every recruiter, but not
+  their emails. Any known recruiter may read it so the switcher can show everyone.
+
 ## Expected result for `candidates_import.csv`
 
 The file has 53 candidate rows (spreadsheet rows 2–54).
