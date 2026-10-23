@@ -1,0 +1,824 @@
+{
+  "info": {
+    "name": "TechForce API",
+    "description": "Candidate import and scoped recruiter view. Every request needs `X-Recruiter-Id`: missing → 401, unknown → 403. Expected numbers come from DECISIONS.md and assume the database was seeded with `uv run python -m app.seed`.\n\nVariables: `baseUrl` (default http://localhost:8000), `adminId` (R-101), and `csvPath`. Set `csvPath` to the absolute path of candidates_import.csv in the Postman app; with newman, run from the repo root and the relative default works.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "adminId",
+      "value": "R-101"
+    },
+    {
+      "key": "csvPath",
+      "value": "candidates_import.csv"
+    }
+  ],
+  "item": [
+    {
+      "name": "Recruiters",
+      "item": [
+        {
+          "name": "List recruiters (as admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('5 recruiters', () => pm.expect(pm.response.json()).to.have.length(5));",
+                  "pm.test('no emails exposed', () => pm.response.json().forEach(r => pm.expect(r).to.not.have.property('email')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "The roster for the switcher: id, name, role, regions. Any known recruiter may read it.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recruiters",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "recruiters"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "List recruiters (no header → 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recruiters",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "recruiters"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "List recruiters (unknown → 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-999"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recruiters",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "recruiters"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Import",
+      "item": [
+        {
+          "name": "Import CSV (as admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('41 candidates written (imported on an empty DB, updated on a re-import)', () => pm.expect(r.imported + r.updated).to.eql(41));",
+                  "pm.test('3 merged', () => pm.expect(r.merged).to.eql(3));",
+                  "pm.test('9 rejected, at rows 35 36 37 42 47 49 50 53 54', () => pm.expect(r.rejected.map(x => x.row)).to.eql([35, 36, 37, 42, 47, 49, 50, 53, 54]));",
+                  "pm.test('ID collision names the owning row', () => pm.expect(r.rejected[7].reason).to.eql('candidate_id C-1010 already belongs to row 11'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "Multipart field `file`. Admin only. Returns {imported, merged, updated, rejected:[{row, reason}]}.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "{{csvPath}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates",
+                "import"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Import CSV (recruiter, not admin → 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-102"
+              }
+            ],
+            "description": "",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "{{csvPath}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates",
+                "import"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Import CSV (no header → 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "{{csvPath}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates",
+                "import"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Candidates",
+      "item": [
+        {
+          "name": "List candidates (admin sees all)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 41', () => pm.expect(pm.response.json().total).to.eql(41));",
+                  "pm.test('25 per page', () => pm.expect(pm.response.json().items).to.have.length(25));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "Scoped to the caller's regions in the query and by row-level security. Ordered by candidate_id.",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?page=1&page_size=25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "25"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List candidates (Caleb: US-MW, US-NE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 19', () => pm.expect(pm.response.json().total).to.eql(19));",
+                  "pm.test('only US-MW/US-NE', () => pm.response.json().items.forEach(c => pm.expect([\"US-MW\", \"US-NE\"]).to.include(c.region_code)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-102"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?page_size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List candidates (Marisol: PH-MNL, CO-BOG)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 9', () => pm.expect(pm.response.json().total).to.eql(9));",
+                  "pm.test('only PH-MNL/CO-BOG', () => pm.response.json().items.forEach(c => pm.expect([\"PH-MNL\", \"CO-BOG\"]).to.include(c.region_code)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-103"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?page_size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List candidates (Jordan: US-W, US-SE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 13', () => pm.expect(pm.response.json().total).to.eql(13));",
+                  "pm.test('only US-W/US-SE', () => pm.response.json().items.forEach(c => pm.expect([\"US-W\", \"US-SE\"]).to.include(c.region_code)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-104"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?page_size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List candidates (Tessa: US-NE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 8', () => pm.expect(pm.response.json().total).to.eql(8));",
+                  "pm.test('only US-NE', () => pm.response.json().items.forEach(c => pm.expect([\"US-NE\"]).to.include(c.region_code)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-105"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?page_size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search full name (admin finds Alicia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 1', () => pm.expect(pm.response.json().total).to.eql(1));",
+                  "pm.test('C-1001', () => pm.expect(pm.response.json().items[0].candidate_id).to.eql('C-1001'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?search=Alicia Trent",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Alicia Trent"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search out of region (Marisol cannot see Alicia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 0', () => pm.expect(pm.response.json().total).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-103"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?search=Alicia Trent",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Alicia Trent"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('total is 5', () => pm.expect(pm.response.json().total).to.eql(5));",
+                  "pm.test('all interviewing', () => pm.response.json().items.forEach(c => pm.expect(c.status).to.eql('interviewing')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?status=interviewing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "interviewing"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Page 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('16 on page 2', () => pm.expect(pm.response.json().items).to.have.length(16));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?page=2&page_size=25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "page_size",
+                  "value": "25"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unicode name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Nguyễn Thị Hoa intact', () => { const c = pm.response.json().items[0]; pm.expect(c.first_name + ' ' + c.last_name).to.eql('Nguyễn Thị Hoa'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?search=Nguyễn",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Nguyễn"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invalid status → 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "{{adminId}}"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates?status=on hold",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "on hold"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "No header → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Unknown recruiter → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Recruiter-Id",
+                "value": "R-999"
+              }
+            ],
+            "description": "",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
