@@ -55,7 +55,7 @@ turned away before anything is read.
 ## Looking at candidates
 
 Each recruiter opens a single page with:
-- a table of candidates showing name, email, region, status, salary expectation and the
+- a table of candidates showing name, email, region, role, status, salary expectation and the
   date they applied;
 - a search box for a name or an email;
 - a filter for status (active, screening, interviewing and so on);

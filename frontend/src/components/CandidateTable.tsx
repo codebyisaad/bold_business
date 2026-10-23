@@ -5,6 +5,7 @@ const COLUMNS = [
   { label: 'Name', numeric: false },
   { label: 'Email', numeric: false },
   { label: 'Region', numeric: false },
+  { label: 'Role', numeric: false },
   { label: 'Status', numeric: false },
   { label: 'Salary', numeric: true },
   { label: 'Applied', numeric: false },
@@ -34,6 +35,7 @@ export function CandidateTable({ candidates }: { candidates: Candidate[] }) {
               <td className="px-4 py-2 text-slate-900">{c.first_name} {c.last_name}</td>
               <td className="px-4 py-2 text-slate-600">{c.email}</td>
               <td className="px-4 py-2 text-slate-600">{c.region_code}</td>
+              <td className="px-4 py-2 text-slate-600">{c.desired_role ?? '—'}</td>
               <td className="px-4 py-2 text-slate-600">{c.status}</td>
               <td className="px-4 py-2 text-right tabular-nums text-slate-600">{formatSalary(c.salary_expectation)}</td>
               <td className="px-4 py-2 tabular-nums text-slate-600">{formatDate(c.applied_date)}</td>

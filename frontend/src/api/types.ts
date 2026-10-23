@@ -16,6 +16,7 @@ export type Candidate = {
   last_name: string
   email: string
   region_code: string
+  desired_role: string | null
   status: Status
   salary_expectation: string | null // decimal sent as a string, e.g. "95000.00"
   applied_date: string | null // ISO YYYY-MM-DD
