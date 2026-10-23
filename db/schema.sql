@@ -27,5 +27,32 @@ CREATE TABLE candidates (
     notes              text
 );
 
+CREATE INDEX candidates_region_code_idx ON candidates (region_code);
+
 GRANT SELECT ON recruiters TO techforce_app;
 GRANT SELECT, INSERT, UPDATE ON candidates TO techforce_app;
+
+-- Row-level security (DECISIONS.md 12 and 14). The API sets app.recruiter_id for each
+-- transaction with set_config(..., true). When it isn't set, current_setting(..., true) is
+-- NULL or '' and matches no recruiter, so every policy denies. The owner is not subject to
+-- these policies; the app role always is.
+ALTER TABLE candidates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY candidates_read ON candidates FOR SELECT TO techforce_app
+USING (EXISTS (
+    SELECT 1 FROM recruiters r
+    WHERE r.recruiter_id = current_setting('app.recruiter_id', true)
+      AND (r.role = 'admin' OR r.assigned_regions ? candidates.region_code)));
+
+CREATE POLICY candidates_insert ON candidates FOR INSERT TO techforce_app
+WITH CHECK (EXISTS (
+    SELECT 1 FROM recruiters r
+    WHERE r.recruiter_id = current_setting('app.recruiter_id', true) AND r.role = 'admin'));
+
+CREATE POLICY candidates_update ON candidates FOR UPDATE TO techforce_app
+USING (EXISTS (
+    SELECT 1 FROM recruiters r
+    WHERE r.recruiter_id = current_setting('app.recruiter_id', true) AND r.role = 'admin'))
+WITH CHECK (EXISTS (
+    SELECT 1 FROM recruiters r
+    WHERE r.recruiter_id = current_setting('app.recruiter_id', true) AND r.role = 'admin'));
