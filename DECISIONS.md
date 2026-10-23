@@ -95,6 +95,9 @@ validation never take part. Rows are checked in file order:
    imported + merged + updated + rejected = rows in the file.
 
 The import report is `{imported, merged, updated, rejected: [{row, reason}]}`.
+- `imported` and `updated` are counted by the database as it writes each row, not inferred
+  in Python.
+- `merged` and `rejected` come from the in-memory steps above.
 
 ## 9. Row numbers in the report
 
@@ -124,6 +127,8 @@ and nothing is written, if:
 - The whole file is written in one database transaction.
 - Rejected rows don't stop the import; they are listed in the report. But a database error
   rolls back the entire file.
+- Imports run one at a time. A second import waits until the first has committed or rolled
+  back, so two imports can't both claim the same candidate_id.
 
 ## 12. Who may import
 
@@ -133,10 +138,15 @@ and nothing is written, if:
 
 ## 13. Recruiters
 
-- The roster is a fixed SQL seed matching recruiters.csv. A test checks they stay in sync.
+- The roster is loaded from recruiters.csv by the seed script (`python -m app.seed`), which
+  connects as the table owner, since the app role can only read recruiters.
+- `assigned_regions` is split on `|` and stored as a JSON list.
+- The roster is configuration, not messy client data, so its values are not normalized:
+  they must already be canonical region codes or `*`. A bad value fails the whole seed,
+  and nothing is loaded.
+- Re-running the seed updates each recruiter by `recruiter_id` to match the file.
 - `role` is the source of truth for admin. The database enforces that a recruiter's regions
   contain `*` if and only if their role is `admin`.
-- A recruiter's regions are stored as a JSON list of canonical region codes.
 
 ## Expected result for `candidates_import.csv`
 
