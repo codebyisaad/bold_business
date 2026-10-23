@@ -6,6 +6,7 @@ Postgres 16 with row-level security, and React with TypeScript, Tailwind and axi
 
 - **[BRIEF.md](BRIEF.md):** the product in plain English.
 - **[DECISIONS.md](DECISIONS.md):** every data rule, with the expected numbers.
+- **[NOTES.md](NOTES.md):** dedup and normalization decisions, the AI usage log, and what's next.
 
 ## How I used AI, and where it fell short
 
