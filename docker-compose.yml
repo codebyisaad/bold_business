@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      OWNER_DB_PASSWORD: ${OWNER_DB_PASSWORD:?set in .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set in .env}
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:
