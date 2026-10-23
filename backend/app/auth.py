@@ -3,7 +3,7 @@ No header is 401; an unknown recruiter is 403. Never falls back to anything."""
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
@@ -19,6 +19,8 @@ def require_recruiter(
     recruiter = session.scalar(select(Recruiter).where(Recruiter.recruiter_id == x_recruiter_id))
     if recruiter is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "unknown recruiter")
+    # Row-level security reads this for the rest of the request's transaction.
+    session.execute(select(func.set_config("app.recruiter_id", recruiter.recruiter_id, True)))
     return recruiter
 
 
