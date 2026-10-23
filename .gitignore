@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local secrets
+.env
+backend/.env
+
+# Brief documents (not part of the submission)
+*.pdf
+.pytest_cache/
+
+# Personal Claude Code settings
+.claude/settings.local.json
