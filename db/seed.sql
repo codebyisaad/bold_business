@@ -1,7 +1,0 @@
--- Fixed roster, mirrors recruiters.csv (a test keeps them in sync). See DECISIONS.md section 13.
-INSERT INTO recruiters (recruiter_id, full_name, email, role, assigned_regions) VALUES
-  ('R-101', 'Dana Whitmore', 'dana.whitmore@techforce-demo.com', 'admin',     '["*"]'),
-  ('R-102', 'Caleb Nguyen',  'caleb.nguyen@techforce-demo.com',  'recruiter', '["US-MW","US-NE"]'),
-  ('R-103', 'Marisol Vega',  'marisol.vega@techforce-demo.com',  'recruiter', '["PH-MNL","CO-BOG"]'),
-  ('R-104', 'Jordan Blake',  'jordan.blake@techforce-demo.com',  'recruiter', '["US-W","US-SE"]'),
-  ('R-105', 'Tessa Iqbal',   'tessa.iqbal@techforce-demo.com',   'recruiter', '["US-NE"]');
