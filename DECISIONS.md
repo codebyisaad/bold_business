@@ -105,8 +105,14 @@ The import report is `{imported, merged, updated, rejected: [{row, reason}]}`.
 
 ## 10. Bad files are rejected whole
 
-Before any row is looked at, the whole upload is refused with HTTP 400 and one reason, and
-nothing is written, if:
+**Size first.** An upload larger than 10 MB (10,485,760 bytes) is refused with HTTP 413
+before its contents are read, decoded or parsed:
+- If the request declares a `Content-Length` over the limit, it is refused immediately.
+- Otherwise the received file's size is checked before a single byte of it is read.
+- The limit is a setting (`MAX_UPLOAD_BYTES`), so it can be raised without a code change.
+
+Then, before any row is looked at, the whole upload is refused with HTTP 400 and one reason,
+and nothing is written, if:
 - it is not valid UTF-8 (a leading byte-order mark is allowed);
 - it is empty, or has a header but no candidate rows;
 - the header is not exactly the 12 expected columns (missing, extra, duplicated or
