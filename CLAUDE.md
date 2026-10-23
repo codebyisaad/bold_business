@@ -43,5 +43,6 @@ DECISIONS.md                   every data rule, in plain English
 ## Commands
 - Install deps: `uv sync`
 - Database: `docker compose up -d --wait` (host port 5433), then `uv run python -m app.db` (add `--reset` to drop tables first) and `uv run python -m app.seed` (loads both CSVs). Tests set up the test DB themselves.
-- Run API: `uv run fastapi dev backend/app/main.py`
+- Run API: `uv run uvicorn app.main:app --reload` (port 8000)
+- Run frontend: `npm --prefix frontend install`, then `npm --prefix frontend run dev` (port 5173)
 - Tests: `uv run pytest backend/tests`
