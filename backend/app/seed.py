@@ -8,7 +8,7 @@ as POST /api/v1/candidates/import.
 import csv
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.dialects.postgresql import insert
 
 from app.config import settings
@@ -56,7 +56,10 @@ def load_recruiters(owner_url: str, path: Path = RECRUITERS_CSV) -> int:
 
 if __name__ == "__main__":
     print(f"recruiters loaded: {load_recruiters(settings.owner_database_url)}")
+    # Import as the roster's admin, exactly as an admin upload would (row-level security).
+    admin_id = next(r["recruiter_id"] for r in read_recruiters(RECRUITERS_CSV) if r["role"] == "admin")
     with SessionLocal() as session:
+        session.execute(select(func.set_config("app.recruiter_id", admin_id, True)))
         report = import_rows(session, parse_csv(CANDIDATES_CSV.read_bytes()))
     print(f"candidates: imported={report.imported} merged={report.merged} "
           f"updated={report.updated} rejected={len(report.rejected)}")
