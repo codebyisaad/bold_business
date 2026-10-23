@@ -7,6 +7,28 @@ Postgres 16 with row-level security, and React with TypeScript, Tailwind and axi
 - **[BRIEF.md](BRIEF.md):** the product in plain English.
 - **[DECISIONS.md](DECISIONS.md):** every data rule, with the expected numbers.
 
+## How I used AI, and where it fell short
+
+I used Claude Code for this build from start to finish. It is fast and clean once it is
+constrained, but three patterns needed correcting.
+
+**1. It over-engineers by default.** For a two-table vertical slice it proposed Alembic,
+async SQLAlchemy, a service layer and a generic repository. I cut them.
+- The architecture should match the load we are actually targeting.
+- A platform for thousands of candidates doesn't need to be built for a million users.
+- Pretending otherwise costs infrastructure, onboarding time and review surface.
+
+**2. It coerces where it should reject.** Unparseable salaries and dates were quietly turned
+into null, but the brief says invalid rows are rejected with a reason.
+- Every normalizer now either returns a canonical value or raises an error.
+- The rules for missing versus invalid values are written down in DECISIONS.md.
+
+**3. It leaves security gaps.** Without prompting, the first pass connected as the Docker
+superuser, which silently bypasses row-level security, and it set the per-request recruiter
+ID by formatting it into a `SET LOCAL` statement.
+- The app now connects as a dedicated role that is not a superuser and owns no tables.
+- The recruiter is set with a parameterized `select set_config(...)`.
+
 ## Run it
 
 You need Docker, [uv](https://docs.astral.sh/uv/) and Node 20 or later.
@@ -74,7 +96,7 @@ uv run pytest                          # 162 tests against the real test databas
   and row-level security as a second line of defence.
 - **Commit structure and the final review of each diff.**
 
-**Caught and corrected**
+**Also caught during this build**
 - The AI proposed leaving the recruiter list open with no header. I required a known
   recruiter, so the roster isn't exposed anonymously.
 - The import endpoint first checked the upload against FastAPI's `UploadFile` class. That
