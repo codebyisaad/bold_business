@@ -114,6 +114,7 @@ class CandidateOut(BaseModel):
     last_name: str
     email: str
     region_code: Region
+    desired_role: str | None
     status: Status
     salary_expectation: Decimal | None
     applied_date: date | None

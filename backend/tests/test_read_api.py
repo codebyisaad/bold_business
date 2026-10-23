@@ -136,7 +136,8 @@ def test_candidate_shape_uses_iso_dates_and_decimal_strings(loaded):
     alicia = get(loaded, "R-101", search="Alicia Trent").json()["items"][0]
     assert alicia == {
         "candidate_id": "C-1001", "first_name": "Alicia", "last_name": "Trent",
-        "email": "alicia.trent@gmail.com", "region_code": "US-MW", "status": "active",
+        "email": "alicia.trent@gmail.com", "region_code": "US-MW", "desired_role": "Full-Stack Engineer",
+        "status": "active",
         "salary_expectation": "95000.00", "applied_date": "2026-05-14",
     }
 
