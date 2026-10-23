@@ -15,5 +15,8 @@ class Settings(BaseSettings):
     owner_database_url: str
     test_owner_database_url: str
 
+    # DECISIONS.md section 10: larger uploads are refused before they are read.
+    max_upload_bytes: int = 10 * 1024 * 1024
+
 
 settings = Settings()
