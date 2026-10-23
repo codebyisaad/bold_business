@@ -1,22 +1,39 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile
 
-from app.auth import require_admin
+from app.auth import require_admin, require_recruiter
 from app.config import settings
 from app.db import get_session
 from app.domain.importer import BadFileError, parse_csv
-from app.domain.schemas import ImportReport
+from app.domain.normalize import Status
+from app.domain.schemas import CandidateOut, CandidatePage, ImportReport
 from app.models import Recruiter
-from app.repositories.candidates import import_rows
+from app.repositories.candidates import import_rows, list_candidates
 
 router = APIRouter(prefix="/api/v1/candidates", tags=["candidates"])
 
 # Room for the multipart boundary and part headers around the file itself.
 MULTIPART_OVERHEAD = 64 * 1024
+
+
+@router.get("", response_model=CandidatePage)
+def read_candidates(
+    recruiter: Annotated[Recruiter, Depends(require_recruiter)],
+    session: Annotated[Session, Depends(get_session)],
+    search: str = "",
+    status: Status | None = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+) -> CandidatePage:
+    """Candidates in the caller's regions (all of them for an admin). DECISIONS.md 14."""
+    items, total = list_candidates(
+        session, recruiter.recruiter_id, search=search, status=status, page=page, page_size=page_size)
+    return CandidatePage(
+        items=[CandidateOut.model_validate(c) for c in items], total=total, page=page, page_size=page_size)
 
 
 @router.post("/import", response_model=ImportReport)

@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.domain import normalize
 from app.domain.importer import RawRow, plan_import
+from app.domain.normalize import Status
 from app.domain.schemas import CandidateRow, ImportPlan, ImportReport
-from app.models import Candidate
+from app.models import Candidate, Recruiter
 
 BATCH_SIZE = 500     # 500 rows x 12 columns stays far below Postgres's 65,535 parameters
 LOOKUP_SIZE = 1000   # values per IN (...) when reading existing candidates
@@ -37,6 +38,39 @@ def import_rows(session: Session, rows: Sequence[RawRow]) -> ImportReport:
         updated=updated,
         rejected=sorted(plan.rejected, key=lambda r: r.row),
     )
+
+
+def visible_to(recruiter_id: str):
+    """The scope rule as a query condition (DECISIONS.md 14). Row-level security applies
+    the same rule again inside Postgres."""
+    return (
+        select(Recruiter.recruiter_id)
+        .where(
+            Recruiter.recruiter_id == recruiter_id,
+            or_(Recruiter.role == "admin", Recruiter.assigned_regions.has_key(Candidate.region_code)),
+        )
+        .exists()
+    )
+
+
+def list_candidates(
+    session: Session, recruiter_id: str, *, search: str, status: Status | None, page: int, page_size: int,
+) -> tuple[list[Candidate], int]:
+    conditions = [visible_to(recruiter_id)]
+    if term := search.strip():
+        full_name = Candidate.first_name + " " + Candidate.last_name
+        conditions.append(or_(full_name.icontains(term, autoescape=True),
+                              Candidate.email.icontains(term, autoescape=True)))
+    if status is not None:
+        conditions.append(Candidate.status == status.value)
+
+    total = session.execute(select(func.count()).select_from(Candidate).where(*conditions)).scalar_one()
+    items = session.execute(
+        select(Candidate).where(*conditions)
+        .order_by(Candidate.candidate_id)
+        .limit(page_size).offset((page - 1) * page_size)
+    ).scalars().all()
+    return list(items), total
 
 
 def load_existing(session: Session, emails: set[str], ids: set[str]) -> list[tuple[str, str]]:

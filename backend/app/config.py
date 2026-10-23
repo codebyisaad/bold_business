@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 10 * 1024 * 1024
 
     # Browser origins allowed to call the API: the Vite dev server.
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:3000"]
 
 
 settings = Settings()

@@ -104,6 +104,39 @@ class ImportReport(BaseModel):
     rejected: list[RejectedRow]
 
 
+class CandidateOut(BaseModel):
+    """One row of GET /api/v1/candidates. Dates are ISO, salary is a two-decimal string."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    candidate_id: str
+    first_name: str
+    last_name: str
+    email: str
+    region_code: Region
+    status: Status
+    salary_expectation: Decimal | None
+    applied_date: date | None
+
+
+class CandidatePage(BaseModel):
+    items: list[CandidateOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class RecruiterOut(BaseModel):
+    """One row of GET /api/v1/recruiters. Emails are deliberately left out."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    recruiter_id: str
+    full_name: str
+    role: str
+    assigned_regions: list[str]
+
+
 class ImportPlan(BaseModel):
     """What the pure importer decided. The writer persists inserts and updates."""
 
